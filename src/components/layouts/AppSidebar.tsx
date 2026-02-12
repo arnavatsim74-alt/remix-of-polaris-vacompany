@@ -45,6 +45,7 @@ const adminNavItems = [
   { title: "Applications", url: "/admin/applications", icon: Users },
   { title: "Settings", url: "/admin/settings", icon: Settings },
   { title: "Sidebar Links", url: "/admin/sidebar-links", icon: LinkIcon },
+  { title: "Bonus Cards", url: "/admin/bonus-cards", icon: CreditCard },
 ];
 
 export function AppSidebar() {

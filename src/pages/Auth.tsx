@@ -34,7 +34,7 @@ export default function AuthPage() {
         const { data } = await supabase
           .from("site_settings")
           .select("key, value")
-          .in("key", ["auth_banner_url", "auth_logo_url"]);
+          .in("key", ["auth_banner_url", "va_logo_url"]);
         const map: Record<string, string> = {};
         data?.forEach((s: any) => { if (s.value) map[s.key] = s.value; });
         return map;
@@ -45,7 +45,7 @@ export default function AuthPage() {
   });
 
   const bannerSrc = siteSettings?.auth_banner_url || aeroflotBanner;
-  const logoSrc = siteSettings?.auth_logo_url || aeroflotLogo;
+  const vaLogoSrc = siteSettings?.va_logo_url || aeroflotLogo;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,12 +87,13 @@ export default function AuthPage() {
       <div className="hidden lg:flex lg:w-3/5 relative">
         <img 
           src={bannerSrc} 
-          alt="Aeroflot Aircraft" 
+          alt="Aircraft" 
           className="absolute inset-0 w-full h-full object-cover" 
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
         <div className="relative z-10 flex flex-col justify-end p-12">
-          <img src={logoSrc} alt="Aeroflot Virtual Group" className="h-16 w-auto object-contain mb-4" />
+          {/* Blue marking area: VACompany logo */}
+          <img src={vacompanyLogo} alt="VACompany" className="h-16 w-auto object-contain mb-4" />
           <p className="text-lg text-foreground/90 max-w-md">
             Welcome to the professional crew management system for Aeroflot Virtual Group pilots on Infinite Flight.
           </p>
@@ -101,15 +102,18 @@ export default function AuthPage() {
 
       {/* Right side - Login form (narrower) */}
       <div className="flex-1 flex flex-col lg:w-2/5">
-        <div className="flex justify-end p-4">
+        {/* Powered by - just image, bigger, at top */}
+        <div className="flex items-center justify-between p-4">
+          <img src={vacompanyLogo} alt="VACompany" className="h-8 w-auto object-contain opacity-80" />
           <ThemeToggle />
         </div>
         
         <div className="flex-1 flex items-center justify-center p-8">
           <Card className="w-full max-w-sm">
             <CardHeader className="space-y-1">
-              <div className="lg:hidden mb-4">
-                <img src={logoSrc} alt="Aeroflot VA" className="h-10 w-auto object-contain" />
+              {/* Orange marking area: VA logo (admin-configurable) */}
+              <div className="mb-4">
+                <img src={vaLogoSrc} alt="VA Logo" className="h-10 w-auto object-contain" />
               </div>
               <CardTitle className="text-2xl">Sign in</CardTitle>
               <CardDescription>
@@ -156,12 +160,6 @@ export default function AuthPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Powered by VACompany */}
-        <div className="flex items-center justify-center gap-2 pb-4 opacity-60">
-          <span className="text-xs text-muted-foreground">Powered by</span>
-          <img src={vacompanyLogo} alt="VACompany" className="h-5 w-auto object-contain" />
         </div>
       </div>
     </div>
