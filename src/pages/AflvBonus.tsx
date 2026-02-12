@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Plane, Clock, Award, TrendingUp } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import bonusCard200 from "@/assets/bonus-card-200.svg";
 import bonusCard400 from "@/assets/bonus-card-400.svg";
@@ -13,28 +14,43 @@ import bonusCard1200 from "@/assets/bonus-card-1200.svg";
 import bonusCard2000 from "@/assets/bonus-card-2000.svg";
 import bonusCard4000 from "@/assets/bonus-card-4000.svg";
 
-const TIERS = [
-  { name: "Premium", minHours: 200, card: bonusCard200, textColor: "text-black" },
-  { name: "Essential", minHours: 400, card: bonusCard400, textColor: "text-black" },
-  { name: "Gold", minHours: 600, card: bonusCard600, textColor: "text-black" },
-  { name: "Card Platina", minHours: 1200, card: bonusCard1200, textColor: "text-white" },
-  { name: "Prestige", minHours: 2000, card: bonusCard2000, textColor: "text-white" },
-  { name: "Black", minHours: 4000, card: bonusCard4000, textColor: "text-white" },
-];
+// Fallback card images mapped by sort_order
+const FALLBACK_CARDS: Record<number, string> = {
+  1: bonusCard200,
+  2: bonusCard400,
+  3: bonusCard600,
+  4: bonusCard1200,
+  5: bonusCard2000,
+  6: bonusCard4000,
+};
 
-function getCurrentTier(hours: number) {
-  let tier = null;
-  for (const t of TIERS) {
-    if (hours >= t.minHours) tier = t;
+interface BonusTier {
+  id: string;
+  name: string;
+  min_hours: number;
+  text_color: string;
+  card_image_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+function getCurrentTier(hours: number, tiers: BonusTier[]) {
+  let tier: BonusTier | null = null;
+  for (const t of tiers) {
+    if (hours >= t.min_hours) tier = t;
   }
   return tier;
 }
 
-function getNextTier(hours: number) {
-  for (const t of TIERS) {
-    if (hours < t.minHours) return t;
+function getNextTier(hours: number, tiers: BonusTier[]) {
+  for (const t of tiers) {
+    if (hours < t.min_hours) return t;
   }
   return null;
+}
+
+function getCardImage(tier: BonusTier) {
+  return tier.card_image_url || FALLBACK_CARDS[tier.sort_order] || bonusCard200;
 }
 
 function generateCardNumber() {
@@ -48,8 +64,21 @@ export default function AflvBonus() {
   const { pilot } = useAuth();
   const queryClient = useQueryClient();
   const hours = pilot?.total_hours ?? 0;
-  const currentTier = getCurrentTier(hours);
-  const nextTier = getNextTier(hours);
+
+  const { data: tiers = [], isLoading: tiersLoading } = useQuery({
+    queryKey: ["bonus-card-tiers"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("bonus_card_tiers")
+        .select("*")
+        .eq("is_active", true)
+        .order("min_hours", { ascending: true });
+      return (data ?? []) as BonusTier[];
+    },
+  });
+
+  const currentTier = getCurrentTier(hours, tiers);
+  const nextTier = getNextTier(hours, tiers);
 
   const { data: bonusCard } = useQuery({
     queryKey: ["bonus-card", pilot?.id],
@@ -79,17 +108,28 @@ export default function AflvBonus() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bonus-card"] }),
   });
 
-  // Auto-create card if pilot exists but no card yet
   const shouldCreate = !!pilot && bonusCard === null && !createCard.isPending;
   if (shouldCreate) {
     createCard.mutate();
   }
 
   const progressToNext = nextTier
-    ? ((hours - (currentTier?.minHours ?? 0)) / (nextTier.minHours - (currentTier?.minHours ?? 0))) * 100
+    ? ((hours - (currentTier?.min_hours ?? 0)) / (nextTier.min_hours - (currentTier?.min_hours ?? 0))) * 100
     : 100;
 
   const cardNumber = bonusCard?.card_number ?? "•••• •••• •••• ••••";
+
+  if (tiersLoading) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold">AFLV Bonus</h1>
+          <p className="text-muted-foreground">Aeroflot Virtual Frequent Flyer Program</p>
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -109,17 +149,16 @@ export default function AflvBonus() {
           <CardContent>
             <div className="relative aspect-[1172/690] w-full max-w-lg mx-auto">
               <img
-                src={currentTier?.card ?? bonusCard200}
+                src={currentTier ? getCardImage(currentTier) : bonusCard200}
                 alt={`${currentTier?.name ?? "Standard"} tier card`}
                 className="w-full h-full object-contain rounded-xl shadow-2xl"
               />
-              {/* Overlay name & card number */}
-              <div className={`absolute bottom-[18%] left-[8%] drop-shadow-lg ${currentTier?.textColor ?? "text-white"}`} style={{ fontFamily: "'Bank Gothic', 'Copperplate', 'Copperplate Gothic Bold', sans-serif" }}>
+              <div className={`absolute bottom-[18%] left-[8%] drop-shadow-lg ${currentTier?.text_color ?? "text-white"}`} style={{ fontFamily: "'Bank Gothic', 'Copperplate', 'Copperplate Gothic Bold', sans-serif" }}>
                 <p className="text-xs md:text-sm opacity-90">{cardNumber}</p>
                 <p className="text-lg md:text-xl font-bold uppercase">{pilot?.full_name ?? "Pilot"}</p>
               </div>
               <div className="absolute bottom-[8%] right-[8%]">
-                <Badge variant="secondary" className={`text-xs font-bold bg-white/20 backdrop-blur border-white/30 ${currentTier?.textColor ?? "text-white"}`}>
+                <Badge variant="secondary" className={`text-xs font-bold bg-white/20 backdrop-blur border-white/30 ${currentTier?.text_color ?? "text-white"}`}>
                   {currentTier?.name ?? "Standard"}
                 </Badge>
               </div>
@@ -174,7 +213,7 @@ export default function AflvBonus() {
                 </div>
                 <Progress value={progressToNext} className="h-3" />
                 <p className="text-xs text-muted-foreground">
-                  {(nextTier.minHours - hours).toFixed(1)} hours remaining
+                  {(nextTier.min_hours - hours).toFixed(1)} hours remaining
                 </p>
               </CardContent>
             </Card>
@@ -186,18 +225,18 @@ export default function AflvBonus() {
       <div>
         <h2 className="text-xl font-semibold mb-4">Tier Levels</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {TIERS.map((tier) => {
-            const unlocked = hours >= tier.minHours;
+          {tiers.map((tier) => {
+            const unlocked = hours >= tier.min_hours;
             return (
-              <Card key={tier.name} className={unlocked ? "ring-2 ring-primary" : "opacity-60"}>
+              <Card key={tier.id} className={unlocked ? "ring-2 ring-primary" : "opacity-60"}>
                 <CardContent className="p-4 space-y-3">
                   <div className="aspect-[1172/690] w-full overflow-hidden rounded-lg">
-                    <img src={tier.card} alt={tier.name} className="w-full h-full object-contain" />
+                    <img src={getCardImage(tier)} alt={tier.name} className="w-full h-full object-contain" />
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="font-semibold">{tier.name}</span>
                     <Badge variant={unlocked ? "default" : "outline"}>
-                      {unlocked ? "Unlocked" : `${tier.minHours}h required`}
+                      {unlocked ? "Unlocked" : `${tier.min_hours}h required`}
                     </Badge>
                   </div>
                 </CardContent>
@@ -206,41 +245,6 @@ export default function AflvBonus() {
           })}
         </div>
       </div>
-
-      {/* Benefits */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Tier Benefits</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-lg border p-4">
-              <h3 className="font-semibold text-sm mb-1">Premium (200h)</h3>
-              <p className="text-xs text-muted-foreground">Priority PIREP review, exclusive Premium badge on leaderboard</p>
-            </div>
-            <div className="rounded-lg border p-4">
-              <h3 className="font-semibold text-sm mb-1">Essential (400h)</h3>
-              <p className="text-xs text-muted-foreground">1.1x bonus multiplier on all flights, Essential badge</p>
-            </div>
-            <div className="rounded-lg border p-4">
-              <h3 className="font-semibold text-sm mb-1">Gold (600h)</h3>
-              <p className="text-xs text-muted-foreground">1.2x bonus multiplier, early event registration access</p>
-            </div>
-            <div className="rounded-lg border p-4">
-              <h3 className="font-semibold text-sm mb-1">Card Platina (1200h)</h3>
-              <p className="text-xs text-muted-foreground">1.3x bonus multiplier, custom callsign, featured on homepage</p>
-            </div>
-            <div className="rounded-lg border p-4">
-              <h3 className="font-semibold text-sm mb-1">Prestige (2000h)</h3>
-              <p className="text-xs text-muted-foreground">1.5x bonus multiplier, route suggestion privileges</p>
-            </div>
-            <div className="rounded-lg border p-4">
-              <h3 className="font-semibold text-sm mb-1">Black (4000h)</h3>
-              <p className="text-xs text-muted-foreground">2x bonus multiplier, VIP status, exclusive Black events</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

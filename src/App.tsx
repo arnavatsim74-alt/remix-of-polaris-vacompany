@@ -35,6 +35,7 @@ import AdminMembers from "@/pages/admin/AdminMembers";
 import AdminChallenges from "@/pages/admin/AdminChallenges";
 import AdminAnnouncements from "@/pages/admin/AdminAnnouncements";
 import AdminSidebarLinks from "@/pages/admin/AdminSidebarLinks";
+import AdminBonusCards from "@/pages/admin/AdminBonusCards";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -76,6 +77,7 @@ const App = () => (
                 <Route path="admin/challenges" element={<AdminChallenges />} />
                 <Route path="admin/announcements" element={<AdminAnnouncements />} />
                 <Route path="admin/sidebar-links" element={<AdminSidebarLinks />} />
+                <Route path="admin/bonus-cards" element={<AdminBonusCards />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

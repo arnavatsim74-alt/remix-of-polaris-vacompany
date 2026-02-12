@@ -34,25 +34,11 @@ export default function AdminSettings() {
       const { data } = await supabase.from("site_settings").select("*");
       return data || [];
     },
-    meta: {
-      onSuccess: (data: any[]) => {
-        const tracker = data.find((s: any) => s.key === "tracker_embed_url")?.value || "";
-        setTrackerUrl(tracker);
-        // Load webhook settings
-        const wh: Record<string, string> = {};
-        WEBHOOK_KEYS.forEach(({ key }) => {
-          wh[key] = data.find((s: any) => s.key === `webhook_${key}`)?.value || "";
-        });
-        setWebhooks(wh);
-      },
-    },
   });
 
-  // Initialize state from settings when loaded
   const getSetting = (key: string) =>
     settings?.find((s: any) => s.key === key)?.value || "";
 
-  // Sync tracker URL on settings load
   if (settings && !trackerDirty) {
     const t = getSetting("tracker_embed_url");
     if (t !== trackerUrl) setTrackerUrl(t);
@@ -100,7 +86,6 @@ export default function AdminSettings() {
       for (const { key } of WEBHOOK_KEYS) {
         await saveSetting(`webhook_${key}`, webhooks[key] || "");
       }
-      // Also update the actual edge function secrets via a note to the admin
       toast.success("Webhook URLs saved to settings. Note: To apply these to Discord notifications, update the corresponding secrets in your backend.");
       setWebhooksDirty(false);
     } catch {
@@ -113,7 +98,7 @@ export default function AdminSettings() {
   const bannerUrl = getSetting("auth_banner_url");
   const heroUrl = getSetting("dashboard_hero_url");
   const sidebarLogoUrl = getSetting("sidebar_logo_url");
-  const authLogoUrl = getSetting("auth_logo_url");
+  const vaLogoUrl = getSetting("va_logo_url");
 
   const ImageUploadCard = ({ title, desc, settingKey, fileName, currentUrl, previewAlt }: {
     title: string; desc: string; settingKey: string; fileName: string; currentUrl: string; previewAlt: string;
@@ -170,7 +155,7 @@ export default function AdminSettings() {
       {/* Logo Management */}
       <div className="grid gap-6 md:grid-cols-2">
         <ImageUploadCard title="Sidebar Logo" desc="Logo shown in the sidebar navigation" settingKey="sidebar_logo_url" fileName="sidebar-logo" currentUrl={sidebarLogoUrl} previewAlt="Sidebar logo" />
-        <ImageUploadCard title="Auth Page Logo" desc="Logo shown on the login page" settingKey="auth_logo_url" fileName="auth-logo" currentUrl={authLogoUrl} previewAlt="Auth logo" />
+        <ImageUploadCard title="VA Logo" desc="The main VA logo shown on auth page and other areas. This is the only logo admins can change." settingKey="va_logo_url" fileName="va-logo" currentUrl={vaLogoUrl} previewAlt="VA logo" />
       </div>
 
       {/* Banner Images */}

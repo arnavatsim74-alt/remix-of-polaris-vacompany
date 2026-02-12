@@ -1,4 +1,6 @@
 import { Outlet } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layouts/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -16,7 +18,7 @@ export function AppLayout() {
             <div className="flex h-full items-center gap-4 px-4">
               <SidebarTrigger className="-ml-1" />
               <div className="flex-1" />
-              <img src={vacompanyLogo} alt="VACompany" className="h-7 w-auto object-contain opacity-80" />
+              <img src={vacompanyLogo} alt="VACompany" className="h-8 w-auto object-contain opacity-80" />
               <ThemeToggle />
               <UserMenu />
             </div>
