@@ -102,9 +102,9 @@ export default function AuthPage() {
 
       {/* Right side - Login form (narrower) */}
       <div className="flex-1 flex flex-col lg:w-2/5">
-        {/* Powered by - just image, bigger, at top */}
+        {/* Powered by logo - only on mobile (portrait), hidden on landscape/desktop */}
         <div className="flex items-center justify-between p-4">
-          <img src={vacompanyLogo} alt="VACompany" className="h-8 w-auto object-contain opacity-80" />
+          <img src={vacompanyLogo} alt="VACompany" className="h-12 w-auto object-contain opacity-80 lg:hidden" />
           <ThemeToggle />
         </div>
         
